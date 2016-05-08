@@ -32,7 +32,7 @@ The request is of the form curl http://127.0.0.1:9000/vehicles/1234/engine -X PO
 
 Along with the happy cases, some edge cases have also been tested:
 
-1. Wrong key sent in the POST request for Start/Stop the car
+1. Wrong key/value sent in the POST request for Start/Stop the car
 2. Wrong URL sent to the Node server
 3. Valid URL with a slash in the end. For example: http://127.0.0.1:9000/vehicles/1234/battery/
 4. Invalid vehicle ID
