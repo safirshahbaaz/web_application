@@ -54,7 +54,7 @@ var httpRoute = {
     					httpRoute['NA'](request, response);
     				}
     				else {
-    					
+    					startOrStopVehicle(pathList[pathList.length - 2], data, response);
     				}
     			});
 			}
@@ -74,6 +74,7 @@ var httpRoute = {
 };
 
 var routes = {
+
 	'vehicleInfo': function() {
 		var responseFields = {
 			'vin': receivedResponseBody['data']['vin']['value'],
@@ -90,6 +91,7 @@ var routes = {
 		originalResponse.writeHead(200, {'Content-Type': 'application/json'});
 		originalResponse.end(JSON.stringify(responseFields));
 	},
+
 	'vehicleDoorInfo': function() {
 		var responseFields = [];
 		for(i = 0; i < receivedResponseBody['data']['doors']['values'].length; i++){
@@ -102,6 +104,7 @@ var routes = {
 		originalResponse.writeHead(200, {'Content-Type': 'application/json'});
 		originalResponse.end(JSON.stringify(responseFields));
 	},
+
 	'vehicleFuelInfo': function() {
 		var responseFields = {
 			'percent': receivedResponseBody['data']['tankLevel']['value'],
@@ -110,10 +113,30 @@ var routes = {
 		originalResponse.writeHead(200, {'Content-Type': 'application/json'});
 		originalResponse.end(JSON.stringify(responseFields));
 	},
+
 	'vehicleBatteryInfo': function() {
 		var responseFields = {
 			'percent': receivedResponseBody['data']['batteryLevel']['value'],
 		};
+
+		originalResponse.writeHead(200, {'Content-Type': 'application/json'});
+		originalResponse.end(JSON.stringify(responseFields));
+	},
+
+	'vehicleStartOrStopInfo': function() {
+		
+		var responseFields = {};
+
+		if(receivedResponseBody['actionResult']['status'] === 'EXECUTED') {
+			responseFields['status'] = 'success';
+		}
+		else if(receivedResponseBody['actionResult']['status'] === 'FAILED') {
+			responseFields['status'] = 'error';
+		}
+		else {
+			/* Not likely to happen but nevertheless */
+			responseFields['status'] = 'failed';
+		}
 
 		originalResponse.writeHead(200, {'Content-Type': 'application/json'});
 		originalResponse.end(JSON.stringify(responseFields));
@@ -153,6 +176,12 @@ var receiveVehicleFuelInfo = function(error, response, body) {
 var receiveVehicleBatteryInfo = function(error, response, body) {
 	if (!error && response.statusCode === 200) {
 		storeParseReturntheResponse(body, 'vehicleBatteryInfo');
+	}
+}
+
+var receiveVehicleStartOrStopInfo = function(error, response, body) {
+	if (!error && response.statusCode === 200) {
+		storeParseReturntheResponse(body, 'vehicleStartOrStopInfo');
 	}
 }
 
@@ -197,7 +226,7 @@ var getVehicleDoorInfo = function(vehicleId, response) {
 
 	originalResponse = response;
 
-	var urlString = "http://gmapi.azurewebsites.net/getEnergyService";
+	var urlString = "http://gmapi.azurewebsites.net/getSecurityStatusService";
 	var requestFields = {
 		"id": vehicleId,
 		"responseType": "JSON"
@@ -231,18 +260,31 @@ var getVehicleBatteryInfo = function(vehicleId, response) {
 	sendTheRequest(urlString, requestFields, receiveVehicleBatteryInfo);
 }
 
-var getVehicleStartStopInfo = function(vehicleId, response) {
-	console.log("I entered here getVehicleStartStopInfo", vehicleId);
+var startOrStopVehicle = function(vehicleId, actionRequested, response) {
+	console.log("I entered here startOrStopVehicle", vehicleId);
 
 	originalResponse = response;
 
 	var urlString = "http://gmapi.azurewebsites.net/actionEngineService";
+
+	var actionString = '';
+
+	if(actionRequested['action'] == 'START') {
+		actionString = 'START_VEHICLE';
+	}
+	else if(actionRequested['action'] == 'STOP') {
+		actionString = 'STOP_VEHICLE';
+	}
+	else {
+		/* We should not be hitting this else statement */
+	}
+
 	var requestFields = {
 		"id": vehicleId,
-		"command": "START_VEHICLE|STOP_VEHICLE",
+		"command": actionString,
 		"responseType": "JSON"
 	}
-	sendTheRequest(urlString, requestFields, receiveVehicleBatteryInfo);
+	sendTheRequest(urlString, requestFields, receiveVehicleStartOrStopInfo);
 }
 
 /**********************************************************************************************************************************/
@@ -258,20 +300,16 @@ function router(request, response) {
 
 	console.log('SAFIR->>', pathList);
 
-	httpRoute[request.method](request, response, pathList);
-
-	/*var resolvedRoute = routes[request.method][baseUrl.pathname];
-
-	if(resolvedRoute != undefined){
-		request.queryParams = baseUrl.query;
-		resolvedRoute(request, response);
+	if(pathList.length >= 3 && pathList[1] === 'vehicles') {
+		httpRoute[request.method](request, response, pathList);
 	}
 	else {
-		routes['NA'](request, response);
-	}*/
+		console.log("Something went wrong!");
+		httpRoute['NA'](request, response);
+	}
 
 }
 
 http.createServer(router).listen(9000);
 
-console.log('Running on 9000');
+console.log('Running on 127.0.0.1:9000');
