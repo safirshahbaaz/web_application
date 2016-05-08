@@ -6,7 +6,7 @@ var receivedResponseBody = '';
 var originalResponse = '';
 
 var httpRoute = {
-	'GET': function(pathList) {
+	'GET': function(request, response, pathList) {
 		if(!isNaN(pathList[pathList.length - 1])) {
 		getVehicleInfo(pathList[pathList.length - 1], response);
 		}
@@ -15,7 +15,7 @@ var httpRoute = {
 				getVehicleDoorInfo(pathList[pathList.length - 2], response);
 			}
 			else{
-				errorRoute['NA'](request, response);
+				httpRoute['NA'](request, response);
 			}
 		}
 		else if(pathList[pathList.length - 1] === 'fuel') {
@@ -23,7 +23,7 @@ var httpRoute = {
 				getVehicleFuelInfo(pathList[pathList.length - 2], response);
 			}
 			else{
-				errorRoute['NA'](request, response);
+				httpRoute['NA'](request, response);
 			}
 		}
 		else if(pathList[pathList.length - 1] === 'battery') {
@@ -31,24 +31,42 @@ var httpRoute = {
 				getVehicleBatteryInfo(pathList[pathList.length - 2], response);
 			}
 			else{
-				errorRoute['NA'](request, response);
+				httpRoute['NA'](request, response);
 			}
 		}
 		else {
 			console.log("Something went wrong!");
-			errorRoute['NA'](request, response);
+			httpRoute['NA'](request, response);
 		}
 	},
-	'POST': function(pathList) {
+	'POST': function(request, response, pathList) {
 		if(pathList[pathList.length - 1] === 'engine') {
 			if(!isNaN(pathList[pathList.length - 2])) {
-				getVehicleBatteryInfo(pathList[pathList.length - 2], response);
+				var data = '';
+    			request.on('data', function(chunk) {
+        			data += chunk.toString();
+    			});
+    			request.on('end', function() {
+        			console.log("SAFIR-->Post ", data);
+        			data = eval("(" + data + ")");
+
+        			if(data['action'] != 'START' && data['action'] != 'STOP') {
+    					httpRoute['NA'](request, response);
+    				}
+    				else {
+    					
+    				}
+    			});
 			}
 			else{
-				errorRoute['NA'](request, response);
+				httpRoute['NA'](request, response);
 			}
 		}
-	}
+		else {
+			console.log("Something went wrong!");
+			httpRoute['NA'](request, response);
+		}
+	},
 	'NA': function(request, response){
 		response.writeHead(404);
 		response.end('<h1> Page not found</h1>');
@@ -240,7 +258,7 @@ function router(request, response) {
 
 	console.log('SAFIR->>', pathList);
 
-	httpRoute[request.method](pathList);
+	httpRoute[request.method](request, response, pathList);
 
 	/*var resolvedRoute = routes[request.method][baseUrl.pathname];
 
