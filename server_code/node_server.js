@@ -5,82 +5,112 @@ var request = require('request');
 var receivedResponseBody = '';
 var originalResponse = '';
 
+/**********************************************************************************************************************************/
+
+/* HTTP Route Handler */
 var httpRoute = {
+	/* GET request handler */
 	'GET': function(request, response, pathList) {
+		/* Get Vehicle Information */
 		if(!isNaN(pathList[pathList.length - 1])) {
-		getVehicleInfo(pathList[pathList.length - 1], response);
+			getVehicleInfo(pathList[pathList.length - 1], response);
 		}
+		/* Get Vehicle doors information */
 		else if(pathList[pathList.length - 1] === 'doors') {
 			if(!isNaN(pathList[pathList.length - 2])) {
 				getVehicleDoorInfo(pathList[pathList.length - 2], response);
 			}
 			else{
-				httpRoute['NA'](request, response);
+				httpRoute['NA']['wrongParameters'](request, response);
 			}
 		}
+		/* Get Vehicle Fuel Information */
 		else if(pathList[pathList.length - 1] === 'fuel') {
 			if(!isNaN(pathList[pathList.length - 2])) {
 				getVehicleFuelInfo(pathList[pathList.length - 2], response);
 			}
 			else{
-				httpRoute['NA'](request, response);
+				httpRoute['NA']['wrongParameters'](request, response);
 			}
 		}
+		/* Get Vehicle Battery Information */
 		else if(pathList[pathList.length - 1] === 'battery') {
 			if(!isNaN(pathList[pathList.length - 2])) {
 				getVehicleBatteryInfo(pathList[pathList.length - 2], response);
 			}
 			else{
-				httpRoute['NA'](request, response);
+				httpRoute['NA']['wrongParameters'](request, response);
 			}
 		}
+		/* Wrong URL sent. Return appropriate response */
 		else {
-			console.log("Something went wrong!");
-			httpRoute['NA'](request, response);
+			httpRoute['NA']['wrongUrl'](request, response);
 		}
 	},
+
+	/* POST request handler */
 	'POST': function(request, response, pathList) {
+		/* Start or Stop the Vehicle */
 		if(pathList[pathList.length - 1] === 'engine') {
 			if(!isNaN(pathList[pathList.length - 2])) {
 				var data = '';
+
+				/* Receive the POSTed to information */
     			request.on('data', function(chunk) {
         			data += chunk.toString();
     			});
+
+    			/* Send the request once the POSTed information is received */
     			request.on('end', function() {
-        			console.log("SAFIR-->Post ", data);
         			data = eval("(" + data + ")");
 
         			if(data['action'] != 'START' && data['action'] != 'STOP') {
-    					httpRoute['NA'](request, response);
+        				/* Wrong action specified */
+    					httpRoute['NA']['wrongParameters'](request, response);
     				}
     				else {
     					startOrStopVehicle(pathList[pathList.length - 2], data, response);
     				}
     			});
 			}
+			/* Wrong URL sent */
 			else{
-				httpRoute['NA'](request, response);
+				httpRoute['NA']['wrongParameters'](request, response);
 			}
 		}
+		/* Wrong URL sent */
 		else {
 			console.log("Something went wrong!");
-			httpRoute['NA'](request, response);
+			httpRoute['NA']['wrongUrl'](request, response);
 		}
 	},
-	'NA': function(request, response){
-		response.writeHead(404);
-		response.end('<h1> Page not found</h1>');
+
+	/* Wrong URL or Parameters handler */
+	'NA': {
+
+		'wrongUrl': function(request, response){
+			response.writeHead(404);
+			response.end('<h1> Wrong URL entered </h1>');
+		},
+
+		'wrongParameters': function(request, response){
+			response.writeHead(404);
+			response.end('<h1> Wrong parameters passed </h1>');
+		},
 	}
 };
 
-var routes = {
+/**********************************************************************************************************************************/
 
+/* Response Generators */
+var routes = {
+	/* Vehicle Information Response  */
 	'vehicleInfo': function() {
 		var responseFields = {
 			'vin': receivedResponseBody['data']['vin']['value'],
 			'color': receivedResponseBody['data']['color']['value'],
 		};
-		if(receivedResponseBody['data']['fourDoorSedan']['value'] == true){
+		if(receivedResponseBody['data']['fourDoorSedan']['value'] == 'True'){
 			responseFields["doorCount"] = 4;
 		}
 		else{
@@ -92,19 +122,29 @@ var routes = {
 		originalResponse.end(JSON.stringify(responseFields));
 	},
 
+	/* Vehicle Door Response */
 	'vehicleDoorInfo': function() {
 		var responseFields = [];
 		for(i = 0; i < receivedResponseBody['data']['doors']['values'].length; i++){
-			responseFields.push({
-				'location': receivedResponseBody['data']['doors']['values'][i]['location']['value'],
-				'locked': receivedResponseBody['data']['doors']['values'][i]['locked']['value']
-			});
+			var jsonInfo = {
+				'location': receivedResponseBody['data']['doors']['values'][i]['location']['value']
+			};
+
+			if(receivedResponseBody['data']['doors']['values'][i]['locked']['value'] === 'True'){
+				jsonInfo['locked'] = true;
+			}
+			else {
+				jsonInfo['locked'] = false;
+			}
+
+			responseFields.push(jsonInfo);
 		}
 
 		originalResponse.writeHead(200, {'Content-Type': 'application/json'});
 		originalResponse.end(JSON.stringify(responseFields));
 	},
 
+	/* Vehichle Fuel Information Response */
 	'vehicleFuelInfo': function() {
 		var responseFields = {
 			'percent': receivedResponseBody['data']['tankLevel']['value'],
@@ -114,6 +154,7 @@ var routes = {
 		originalResponse.end(JSON.stringify(responseFields));
 	},
 
+	/* Vehichle Battery Information Response */
 	'vehicleBatteryInfo': function() {
 		var responseFields = {
 			'percent': receivedResponseBody['data']['batteryLevel']['value'],
@@ -123,6 +164,7 @@ var routes = {
 		originalResponse.end(JSON.stringify(responseFields));
 	},
 
+	/* Vehichle Start or Stop Response */
 	'vehicleStartOrStopInfo': function() {
 		
 		var responseFields = {};
@@ -145,6 +187,7 @@ var routes = {
 
 /**********************************************************************************************************************************/
 
+/* Function to call the appropriate response generator */
 var storeParseReturntheResponse = function(body, actionType){
 	receivedResponseBody = body;
 	console.log(receivedResponseBody);
@@ -187,6 +230,7 @@ var receiveVehicleStartOrStopInfo = function(error, response, body) {
 
 /**********************************************************************************************************************************/
 
+/* Function to send the request to the Server */
 var sendTheRequest = function(urlString, requestFields, callBackFunction){
 
 	request({
@@ -296,16 +340,21 @@ function router(request, response) {
 	var baseUrl = url.parse(request.url, true);
 	console.log('Requested: ', baseUrl)
 
+	/* Defensive Coding: Removing a slash from the end of URLs if present */
+	if(baseUrl.pathname[baseUrl.pathname.length - 1] === '/'){
+		baseUrl.pathname = baseUrl.pathname.substring(0, baseUrl.pathname.length - 1);
+		console.log(baseUrl.pathname);
+	}
+
 	var pathList = baseUrl.pathname.split("/");
 
-	console.log('SAFIR->>', pathList);
-
-	if(pathList.length >= 3 && pathList[1] === 'vehicles') {
+	/* Move the request and response along with the path to the correct HTTP request handler */
+	if(pathList.length >= 3 && pathList[1] === 'vehicles' && (request.method === 'POST' || request.method === 'GET')) {
 		httpRoute[request.method](request, response, pathList);
 	}
 	else {
-		console.log("Something went wrong!");
-		httpRoute['NA'](request, response);
+		/* Got a wrong URL */
+		httpRoute['NA']['wrongUrl'](request, response);
 	}
 
 }
