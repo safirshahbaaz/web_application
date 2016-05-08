@@ -12,15 +12,19 @@ Following are the details of the implementation and test cases:
 
 ### Get Vehicle Information
 The request is of the form http://127.0.0.1:9000/vehicles/1234.
+
 curl http://127.0.0.1:9000/vehicles/1234 -X GET -H 'Content-type: application/json'
 
 ### Get Vehicle Door Information
 The request is of the form http://127.0.0.1:9000/vehicles/1234/doors.
+
 curl http://127.0.0.1:9000/vehicles/1234/doors -X GET -H 'Content-type: application/json'
 
 ### Get Vehicle Fuel and Battery Information
 The request is of the form http://127.0.0.1:9000/vehicles/1234/battery or  http://127.0.0.1:9000/vehicles/1234/fuel.
+
 curl http://127.0.0.1:9000/vehicles/1234/battery -X GET -H 'Content-type: application/json'
+
 curl http://127.0.0.1:9000/vehicles/1234/fuel -X GET -H 'Content-type: application/json'
 
 ### Post Vehicle Start/Stop Information
