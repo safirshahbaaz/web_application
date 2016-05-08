@@ -97,6 +97,11 @@ var httpRoute = {
 			response.writeHead(404);
 			response.end('<h1> Wrong parameters passed </h1>');
 		},
+
+		'wrongResponse': function() {
+			originalResponse.writeHead(404);
+			originalResponse.end('<h1> Wrong JSON returned by Server </h1>');
+		}
 	}
 };
 
@@ -106,82 +111,122 @@ var httpRoute = {
 var routes = {
 	/* Vehicle Information Response  */
 	'vehicleInfo': function() {
-		var responseFields = {
-			'vin': receivedResponseBody['data']['vin']['value'],
-			'color': receivedResponseBody['data']['color']['value'],
-		};
-		if(receivedResponseBody['data']['fourDoorSedan']['value'] == 'True'){
-			responseFields["doorCount"] = 4;
-		}
-		else{
-			responseFields["doorCount"] = 2;
-		}
-		responseFields["driveTrain"] = receivedResponseBody['data']['driveTrain']['value'];
+		try {
+			var responseFields = {
+				'vin': receivedResponseBody['data']['vin']['value'],
+				'color': receivedResponseBody['data']['color']['value'],
+			};
+			if(receivedResponseBody['data']['fourDoorSedan']['value'] == 'True'){
+				responseFields["doorCount"] = 4;
+			}
+			else{
+				responseFields["doorCount"] = 2;
+			}
+			responseFields["driveTrain"] = receivedResponseBody['data']['driveTrain']['value'];
 
-		originalResponse.writeHead(200, {'Content-Type': 'application/json'});
-		originalResponse.end(JSON.stringify(responseFields));
+			originalResponse.writeHead(200, {'Content-Type': 'application/json'});
+			originalResponse.end(JSON.stringify(responseFields));
+		}
+		catch(err) {
+			httpRoute['NA']['wrongResponse']();
+		}
 	},
 
 	/* Vehicle Door Response */
 	'vehicleDoorInfo': function() {
-		var responseFields = [];
-		for(i = 0; i < receivedResponseBody['data']['doors']['values'].length; i++){
-			var jsonInfo = {
-				'location': receivedResponseBody['data']['doors']['values'][i]['location']['value']
-			};
+		try {
+			var responseFields = [];
+			for(i = 0; i < receivedResponseBody['data']['doors']['values'].length; i++){
+				var jsonInfo = {
+					'location': receivedResponseBody['data']['doors']['values'][i]['location']['value']
+				};
 
-			if(receivedResponseBody['data']['doors']['values'][i]['locked']['value'] === 'True'){
-				jsonInfo['locked'] = true;
-			}
-			else {
-				jsonInfo['locked'] = false;
+				if(receivedResponseBody['data']['doors']['values'][i]['locked']['value'] === 'True'){
+					jsonInfo['locked'] = true;
+				}
+				else {
+					jsonInfo['locked'] = false;
+				}
+
+				responseFields.push(jsonInfo);
 			}
 
-			responseFields.push(jsonInfo);
+			originalResponse.writeHead(200, {'Content-Type': 'application/json'});
+			originalResponse.end(JSON.stringify(responseFields));
 		}
-
-		originalResponse.writeHead(200, {'Content-Type': 'application/json'});
-		originalResponse.end(JSON.stringify(responseFields));
+		catch(err) {
+			httpRoute['NA']['wrongResponse']();
+		}
 	},
 
 	/* Vehichle Fuel Information Response */
 	'vehicleFuelInfo': function() {
-		var responseFields = {
-			'percent': receivedResponseBody['data']['tankLevel']['value'],
-		};
+		try {
+			var responseFields = {
+				'percent': parseFloat(receivedResponseBody['data']['tankLevel']['value'], 10)
+			};
 
-		originalResponse.writeHead(200, {'Content-Type': 'application/json'});
-		originalResponse.end(JSON.stringify(responseFields));
+			originalResponse.writeHead(200, {'Content-Type': 'application/json'});
+			originalResponse.end(JSON.stringify(responseFields));
+		}
+		catch(err) {
+			httpRoute['NA']['wrongResponse']();
+		}
 	},
 
 	/* Vehichle Battery Information Response */
 	'vehicleBatteryInfo': function() {
-		var responseFields = {
-			'percent': receivedResponseBody['data']['batteryLevel']['value'],
-		};
+		try {
+			var responseFields = {
+				'percent': parseFloat(receivedResponseBody['data']['batteryLevel']['value'], 10)
+			};
 
-		originalResponse.writeHead(200, {'Content-Type': 'application/json'});
-		originalResponse.end(JSON.stringify(responseFields));
+			originalResponse.writeHead(200, {'Content-Type': 'application/json'});
+			originalResponse.end(JSON.stringify(responseFields));
+		}
+		catch(err) {
+			httpRoute['NA']['wrongResponse']();
+		}
 	},
 
 	/* Vehichle Start or Stop Response */
 	'vehicleStartOrStopInfo': function() {
-		
-		var responseFields = {};
+		try {
+			var responseFields = {};
 
-		if(receivedResponseBody['actionResult']['status'] === 'EXECUTED') {
-			responseFields['status'] = 'success';
-		}
-		else if(receivedResponseBody['actionResult']['status'] === 'FAILED') {
-			responseFields['status'] = 'error';
-		}
-		else {
-			/* Not likely to happen but nevertheless */
-			responseFields['status'] = 'failed';
-		}
+			if(receivedResponseBody['actionResult']['status'] === 'EXECUTED') {
+				responseFields['status'] = 'success';
+			}
+			else if(receivedResponseBody['actionResult']['status'] === 'FAILED') {
+				responseFields['status'] = 'error';
+			}
+			else {
+				/* Not likely to happen but nevertheless */
+				responseFields['status'] = 'failed';
+			}
 
-		originalResponse.writeHead(200, {'Content-Type': 'application/json'});
-		originalResponse.end(JSON.stringify(responseFields));
+			originalResponse.writeHead(200, {'Content-Type': 'application/json'});
+			originalResponse.end(JSON.stringify(responseFields));
+		}
+		catch(err) {
+			httpRoute['NA']['wrongResponse']();
+		}
+	},
+
+	/* Error Response Handler */
+	'errorResponse': function() {
+		try {
+			var responseFields = {
+				'status': 404,
+				'reason': receivedResponseBody['reason']
+			};
+
+			originalResponse.writeHead(404, {'Content-Type': 'application/json'});
+			originalResponse.end(JSON.stringify(responseFields));
+		}
+		catch(err) {
+			httpRoute['NA']['wrongResponse']();
+		}
 	}
 };
 
@@ -191,7 +236,13 @@ var routes = {
 var storeParseReturntheResponse = function(body, actionType){
 	receivedResponseBody = body;
 	console.log(receivedResponseBody);
-	routes[actionType]();
+
+	if(receivedResponseBody['status'] === '404') {
+		routes['errorResponse']();
+	}
+	else {
+		routes[actionType]();
+	}
 }
 
 /**********************************************************************************************************************************/
@@ -253,7 +304,6 @@ var sendTheRequest = function(urlString, requestFields, callBackFunction){
 /* Starting functions to send the requests */
 
 var getVehicleInfo = function(vehicleId, response) {
-	console.log("I entered here", vehicleId);
 
 	originalResponse = response;
 
@@ -266,7 +316,6 @@ var getVehicleInfo = function(vehicleId, response) {
 }
 
 var getVehicleDoorInfo = function(vehicleId, response) {
-	console.log("I entered here getVehicleDoorInfo", vehicleId);
 
 	originalResponse = response;
 
@@ -279,7 +328,6 @@ var getVehicleDoorInfo = function(vehicleId, response) {
 }
 
 var getVehicleFuelInfo = function(vehicleId, response) {
-	console.log("I entered here getVehicleFuelInfo", vehicleId);
 
 	originalResponse = response;
 
@@ -292,7 +340,6 @@ var getVehicleFuelInfo = function(vehicleId, response) {
 }
 
 var getVehicleBatteryInfo = function(vehicleId, response) {
-	console.log("I entered here getVehicleBatteryInfo", vehicleId);
 
 	originalResponse = response;
 
@@ -305,7 +352,6 @@ var getVehicleBatteryInfo = function(vehicleId, response) {
 }
 
 var startOrStopVehicle = function(vehicleId, actionRequested, response) {
-	console.log("I entered here startOrStopVehicle", vehicleId);
 
 	originalResponse = response;
 
