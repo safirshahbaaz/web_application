@@ -159,7 +159,7 @@ var routes = {
 		}
 	},
 
-	/* Vehichle Fuel Information Response */
+	/* Vehicle Fuel Information Response */
 	'vehicleFuelInfo': function() {
 		try {
 			var responseFields = {
@@ -174,7 +174,7 @@ var routes = {
 		}
 	},
 
-	/* Vehichle Battery Information Response */
+	/* Vehicle Battery Information Response */
 	'vehicleBatteryInfo': function() {
 		try {
 			var responseFields = {
@@ -189,7 +189,7 @@ var routes = {
 		}
 	},
 
-	/* Vehichle Start or Stop Response */
+	/* Vehicle Start or Stop Response */
 	'vehicleStartOrStopInfo': function() {
 		try {
 			var responseFields = {};
