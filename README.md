@@ -37,3 +37,8 @@ Along with the happy cases, some edge cases have also been tested:
 3. Valid URL with a slash in the end. For example: http://127.0.0.1:9000/vehicles/1234/battery/
 4. Invalid vehicle ID
 5. Defensive coding in place for incorrect server response(Exceptions that can be raised due to incorrect fields in the JSON)
+6. I tried simulating a timeout by turning off the WiFi as soon as the request is sent from the client. However, documentation for the request package states the following:
+
+timeout - Integer containing the number of milliseconds to wait for a server to send response headers (and start the response body) before aborting the request. Note that if the underlying TCP connection cannot be established, the OS-wide TCP connection timeout will overrule the timeout option
+
+To truly the test no response from the server, no content must be sent back from it. Turning off the WiFi at the Node server side does not really replicate the actual scenario.
