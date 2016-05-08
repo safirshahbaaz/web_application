@@ -1,6 +1,7 @@
 # web_application
 
 The Node Server is running on 127.0.0.1:9000. Every request is handled in the following manner:
+
 1. Based on the request type(GET or POST), the request, response, and the path information is sent to appropriate HTTP request handler.
 2. The request handler finds out the information that is being requested, and calls a function to create the request JSON object.
 3. The request is then POSTed to the server.
@@ -26,6 +27,7 @@ curl http://127.0.0.1:9000/vehicles/1234/fuel -X GET -H 'Content-type: applicati
 The request is of the form curl http://127.0.0.1:9000/vehicles/1234/engine -X POST -H 'Content-type: application/json' -d '{"action":"START"}'
 
 Along with the happy cases, some edge cases have also been tested:
+
 1. Wrong key sent in the POST request for Start/Stop the car
 2. Wrong URL sent to the Node server
 3. Valid URL with a slash in the end. For example: http://127.0.0.1:9000/vehicles/1234/battery/
