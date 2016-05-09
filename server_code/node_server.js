@@ -65,7 +65,8 @@ var httpRoute = {
 
 				/* Send the request once the POSTed information is received */
 				request.on('end', function() {
-					data = eval("(" + data + ")");
+
+					data = JSON.parse(data);
 
 					if(data['action'] != 'START' && data['action'] != 'STOP') {
 						/* Wrong action specified */
@@ -138,8 +139,10 @@ var routes = {
 	/* Vehicle Door Response */
 	'vehicleDoorInfo': function(receivedResponseBody) {
 		try {
-			var responseFields = [];
-			for(i = 0; i < receivedResponseBody['data']['doors']['values'].length; i++){
+			var responseFields 	= [];
+			var doorCount	   	= receivedResponseBody['data']['doors']['values'].length;
+
+			for(var i = 0; i < doorCount; i++){
 				var jsonInfo = {
 					'location': receivedResponseBody['data']['doors']['values'][i]['location']['value']
 				};
@@ -217,7 +220,7 @@ var routes = {
 	},
 
 	/* Error Response Handler */
-	'errorResponse': function() {
+	'errorResponse': function(receivedResponseBody) {
 		try {
 			var responseFields = {
 				'status': 404,
@@ -241,7 +244,7 @@ var storeParseReturntheResponse = function(body, actionType){
 	console.log(body);
 
 	if(body['status'] === '404') {
-		routes['errorResponse']();
+		routes['errorResponse'](body);
 	}
 	else {
 		routes[actionType](body);
