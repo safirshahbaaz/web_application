@@ -29,13 +29,12 @@ var httpRoute = {
 					break;	
 				}
 					
-
 				/* Get Vehicle Fuel Information */
 				case 'fuel': {
 					getVehicleFuelInfo(vehicleId, response);
 					break;
-
-				} 		
+				}
+				 		
 				/* Get Vehicle Battery Information */
 				case 'battery': {
 					getVehicleBatteryInfo(vehicleId, response);
