@@ -2,7 +2,6 @@ var http = require('http');
 var url = require('url');
 var request = require('request');
 
-var receivedResponseBody = '';
 var originalResponse = '';
 
 /**********************************************************************************************************************************/
@@ -12,66 +11,70 @@ var httpRoute = {
 	/* GET request handler */
 	'GET': function(request, response, pathList) {
 		/* Get Vehicle Information */
-		if(!isNaN(pathList[pathList.length - 1])) {
-			getVehicleInfo(pathList[pathList.length - 1], response);
+
+		var pathListLength = pathList.length;
+
+		if(!isNaN(pathList[pathListLength - 1])) {
+			getVehicleInfo(pathList[pathListLength - 1], response);
 		}
-		/* Get Vehicle doors information */
-		else if(pathList[pathList.length - 1] === 'doors') {
-			if(!isNaN(pathList[pathList.length - 2])) {
-				getVehicleDoorInfo(pathList[pathList.length - 2], response);
+		else if(!isNaN(pathList[pathListLength - 2])) {
+			var actionType 	= pathList[pathListLength - 1];
+			var vehicleId 	= pathList[pathListLength - 2];
+
+			switch(actionType) {
+
+				/* Get Vehicle doors information */
+				case 'doors': 		getVehicleDoorInfo(vehicleId, response);
+							  		break;
+
+				/* Get Vehicle Fuel Information */
+				case 'fuel': 		getVehicleFuelInfo(vehicleId, response);
+									break;
+
+				/* Get Vehicle Battery Information */
+				case 'battery': 	getVehicleBatteryInfo(vehicleId, response);
+									break;
+
+				/* Wrong URL */
+				default: 			httpRoute['NA']['wrongUrl'](request, response);
+									break;
 			}
-			else{
-				httpRoute['NA']['wrongParameters'](request, response);
-			}
+
 		}
-		/* Get Vehicle Fuel Information */
-		else if(pathList[pathList.length - 1] === 'fuel') {
-			if(!isNaN(pathList[pathList.length - 2])) {
-				getVehicleFuelInfo(pathList[pathList.length - 2], response);
-			}
-			else{
-				httpRoute['NA']['wrongParameters'](request, response);
-			}
-		}
-		/* Get Vehicle Battery Information */
-		else if(pathList[pathList.length - 1] === 'battery') {
-			if(!isNaN(pathList[pathList.length - 2])) {
-				getVehicleBatteryInfo(pathList[pathList.length - 2], response);
-			}
-			else{
-				httpRoute['NA']['wrongParameters'](request, response);
-			}
-		}
-		/* Wrong URL sent. Return appropriate response */
+		/* Wrong parameters sent. Return appropriate response */
 		else {
-			httpRoute['NA']['wrongUrl'](request, response);
+			httpRoute['NA']['wrongParameters'](request, response);
 		}
 	},
 
 	/* POST request handler */
 	'POST': function(request, response, pathList) {
+
+		var pathListLength 	= pathList.length;
+		var vehicleId 		=  pathList[pathListLength - 2];
+
 		/* Start or Stop the Vehicle */
-		if(pathList[pathList.length - 1] === 'engine') {
-			if(!isNaN(pathList[pathList.length - 2])) {
+		if(pathList[pathListLength - 1] === 'engine') {
+			if(!isNaN(vehicleId)) {
 				var data = '';
 
 				/* Receive the POSTed to information */
-    			request.on('data', function(chunk) {
-        			data += chunk.toString();
-    			});
+				request.on('data', function(chunk) {
+					data += chunk.toString();
+				});
 
-    			/* Send the request once the POSTed information is received */
-    			request.on('end', function() {
-        			data = eval("(" + data + ")");
+				/* Send the request once the POSTed information is received */
+				request.on('end', function() {
+					data = eval("(" + data + ")");
 
-        			if(data['action'] != 'START' && data['action'] != 'STOP') {
-        				/* Wrong action specified */
-    					httpRoute['NA']['wrongParameters'](request, response);
-    				}
-    				else {
-    					startOrStopVehicle(pathList[pathList.length - 2], data, response);
-    				}
-    			});
+					if(data['action'] != 'START' && data['action'] != 'STOP') {
+						/* Wrong action specified */
+						httpRoute['NA']['wrongParameters'](request, response);
+					}
+					else {
+						startOrStopVehicle(vehicleId, data['action'], response);
+					}
+				});
 			}
 			/* Wrong URL sent */
 			else{
@@ -110,7 +113,7 @@ var httpRoute = {
 /* Response Generators */
 var routes = {
 	/* Vehicle Information Response  */
-	'vehicleInfo': function() {
+	'vehicleInfo': function(receivedResponseBody) {
 		try {
 			var responseFields = {
 				'vin': receivedResponseBody['data']['vin']['value'],
@@ -133,7 +136,7 @@ var routes = {
 	},
 
 	/* Vehicle Door Response */
-	'vehicleDoorInfo': function() {
+	'vehicleDoorInfo': function(receivedResponseBody) {
 		try {
 			var responseFields = [];
 			for(i = 0; i < receivedResponseBody['data']['doors']['values'].length; i++){
@@ -160,7 +163,7 @@ var routes = {
 	},
 
 	/* Vehicle Fuel Information Response */
-	'vehicleFuelInfo': function() {
+	'vehicleFuelInfo': function(receivedResponseBody) {
 		try {
 			var responseFields = {
 				'percent': parseFloat(receivedResponseBody['data']['tankLevel']['value'], 10)
@@ -175,7 +178,7 @@ var routes = {
 	},
 
 	/* Vehicle Battery Information Response */
-	'vehicleBatteryInfo': function() {
+	'vehicleBatteryInfo': function(receivedResponseBody) {
 		try {
 			var responseFields = {
 				'percent': parseFloat(receivedResponseBody['data']['batteryLevel']['value'], 10)
@@ -190,7 +193,7 @@ var routes = {
 	},
 
 	/* Vehicle Start or Stop Response */
-	'vehicleStartOrStopInfo': function() {
+	'vehicleStartOrStopInfo': function(receivedResponseBody) {
 		try {
 			var responseFields = {};
 
@@ -234,14 +237,14 @@ var routes = {
 
 /* Function to call the appropriate response generator */
 var storeParseReturntheResponse = function(body, actionType){
-	receivedResponseBody = body;
-	console.log(receivedResponseBody);
 
-	if(receivedResponseBody['status'] === '404') {
+	console.log(body);
+
+	if(body['status'] === '404') {
 		routes['errorResponse']();
 	}
 	else {
-		routes[actionType]();
+		routes[actionType](body);
 	}
 }
 
@@ -359,10 +362,10 @@ var startOrStopVehicle = function(vehicleId, actionRequested, response) {
 
 	var actionString = '';
 
-	if(actionRequested['action'] == 'START') {
+	if(actionRequested == 'START') {
 		actionString = 'START_VEHICLE';
 	}
-	else if(actionRequested['action'] == 'STOP') {
+	else if(actionRequested == 'STOP') {
 		actionString = 'STOP_VEHICLE';
 	}
 	else {
