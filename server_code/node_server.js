@@ -77,7 +77,7 @@ var httpRoute = {
 					}
 				});
 			}
-			/* Wrong URL sent */
+			/* Wrong Parameters sent */
 			else{
 				httpRoute['NA']['wrongParameters'](request, response);
 			}
@@ -93,17 +93,17 @@ var httpRoute = {
 	'NA': {
 
 		'wrongUrl': function(request, response){
-			response.writeHead(404);
+			response.writeHead(400);
 			response.end('<h1> Wrong URL entered </h1>');
 		},
 
 		'wrongParameters': function(request, response){
-			response.writeHead(404);
+			response.writeHead(400);
 			response.end('<h1> Wrong parameters passed </h1>');
 		},
 
 		'wrongResponse': function() {
-			originalResponse.writeHead(404);
+			originalResponse.writeHead(500);
 			originalResponse.end('<h1> Wrong JSON returned by Server </h1>');
 		}
 	}
