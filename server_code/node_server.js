@@ -24,20 +24,29 @@ var httpRoute = {
 			switch(actionType) {
 
 				/* Get Vehicle doors information */
-				case 'doors': 		getVehicleDoorInfo(vehicleId, response);
-							  		break;
+				case 'doors': {
+					getVehicleDoorInfo(vehicleId, response);
+					break;	
+				}
+					
 
 				/* Get Vehicle Fuel Information */
-				case 'fuel': 		getVehicleFuelInfo(vehicleId, response);
-									break;
+				case 'fuel': {
+					getVehicleFuelInfo(vehicleId, response);
+					break;
 
+				} 		
 				/* Get Vehicle Battery Information */
-				case 'battery': 	getVehicleBatteryInfo(vehicleId, response);
-									break;
+				case 'battery': {
+					getVehicleBatteryInfo(vehicleId, response);
+					break;
+				}	
 
 				/* Wrong URL */
-				default: 			httpRoute['NA']['wrongUrl'](request, response);
-									break;
+				default: {
+					httpRoute['NA']['wrongUrl'](request, response);
+					break;
+				}			
 			}
 
 		}
