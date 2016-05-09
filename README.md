@@ -2,7 +2,7 @@
 
 The Node Server is running on 127.0.0.1:9000. Every request is handled in the following manner:
 
-1. Based on the request type(GET or POST), the request, response, and the path information is sent to appropriate HTTP request handler.
+1. Based on the request type(GET or POST), the request, response, and the path information is sent to the appropriate HTTP request handler.
 2. The request handler finds out the information that is being requested, and calls a function to create the request JSON object.
 3. The request is then POSTed to the server.
 4. In the callback function, a function is called with the action type(based on the request).
@@ -41,4 +41,4 @@ Along with the happy cases, some edge cases have also been tested:
 
 timeout - Integer containing the number of milliseconds to wait for a server to send response headers (and start the response body) before aborting the request. Note that if the underlying TCP connection cannot be established, the OS-wide TCP connection timeout will overrule the timeout option
 
-To truly the test no response from the server, no content must be sent back from it. Turning off the WiFi at the Node server side does not really replicate the actual scenario.
+To truly test no response from the server, no content must be sent back from it. Turning off the WiFi at the Node server side does not really replicate the actual scenario.
