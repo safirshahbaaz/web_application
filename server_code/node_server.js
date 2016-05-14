@@ -4,6 +4,8 @@ var request = require('request');
 
 var originalResponse = '';
 
+
+
 /**********************************************************************************************************************************/
 
 /* HTTP Route Handler */
@@ -261,42 +263,8 @@ var storeParseReturntheResponse = function(body, actionType){
 
 /**********************************************************************************************************************************/
 
-/* Callback functions for each of the different responses */
-
-var receiveVehicleInfo = function(error, response, body) {
-	if (!error && response.statusCode === 200) {
-		storeParseReturntheResponse(body, 'vehicleInfo');
-	}
-}
-
-var receiveVehicleDoorInfo = function(error, response, body) {
-	if (!error && response.statusCode === 200) {
-		storeParseReturntheResponse(body, 'vehicleDoorInfo');
-	}
-}
-
-var receiveVehicleFuelInfo = function(error, response, body) {
-	if (!error && response.statusCode === 200) {
-		storeParseReturntheResponse(body, 'vehicleFuelInfo');
-	}
-}
-
-var receiveVehicleBatteryInfo = function(error, response, body) {
-	if (!error && response.statusCode === 200) {
-		storeParseReturntheResponse(body, 'vehicleBatteryInfo');
-	}
-}
-
-var receiveVehicleStartOrStopInfo = function(error, response, body) {
-	if (!error && response.statusCode === 200) {
-		storeParseReturntheResponse(body, 'vehicleStartOrStopInfo');
-	}
-}
-
-/**********************************************************************************************************************************/
-
 /* Function to send the request to the Server */
-var sendTheRequest = function(urlString, requestFields, callBackFunction){
+var sendTheRequest = function(urlString, requestFields, actionType){
 
 	request({
 		uri: urlString,
@@ -309,7 +277,11 @@ var sendTheRequest = function(urlString, requestFields, callBackFunction){
 			'content-type': 'application/json'
 		},
 		body: requestFields
-	}, callBackFunction);
+	}, function(error, response, body) {
+		if (!error && response.statusCode === 200) {
+			storeParseReturntheResponse(body, actionType);
+		}
+	});
 
 }
 
@@ -326,7 +298,7 @@ var getVehicleInfo = function(vehicleId, response) {
 		"id": vehicleId,
 		"responseType": "JSON"
 	}
-	sendTheRequest(urlString, requestFields, receiveVehicleInfo);
+	sendTheRequest(urlString, requestFields, 'vehicleInfo');
 }
 
 var getVehicleDoorInfo = function(vehicleId, response) {
@@ -338,7 +310,7 @@ var getVehicleDoorInfo = function(vehicleId, response) {
 		"id": vehicleId,
 		"responseType": "JSON"
 	}
-	sendTheRequest(urlString, requestFields, receiveVehicleDoorInfo);
+	sendTheRequest(urlString, requestFields, 'vehicleDoorInfo');
 }
 
 var getVehicleFuelInfo = function(vehicleId, response) {
@@ -350,7 +322,7 @@ var getVehicleFuelInfo = function(vehicleId, response) {
 		"id": vehicleId,
 		"responseType": "JSON"
 	}
-	sendTheRequest(urlString, requestFields, receiveVehicleFuelInfo);
+	sendTheRequest(urlString, requestFields, 'vehicleFuelInfo');
 }
 
 var getVehicleBatteryInfo = function(vehicleId, response) {
@@ -362,7 +334,7 @@ var getVehicleBatteryInfo = function(vehicleId, response) {
 		"id": vehicleId,
 		"responseType": "JSON"
 	}
-	sendTheRequest(urlString, requestFields, receiveVehicleBatteryInfo);
+	sendTheRequest(urlString, requestFields, 'vehicleBatteryInfo');
 }
 
 var startOrStopVehicle = function(vehicleId, actionRequested, response) {
@@ -388,7 +360,7 @@ var startOrStopVehicle = function(vehicleId, actionRequested, response) {
 		"command": actionString,
 		"responseType": "JSON"
 	}
-	sendTheRequest(urlString, requestFields, receiveVehicleStartOrStopInfo);
+	sendTheRequest(urlString, requestFields, 'vehicleStartOrStopInfo');
 }
 
 /**********************************************************************************************************************************/
