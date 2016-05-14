@@ -2,9 +2,12 @@ var http = require('http');
 var url = require('url');
 var request = require('request');
 
-var originalResponse = '';
-
-
+var urlDict = {
+	'vehicleInfo': "http://gmapi.azurewebsites.net/getVehicleInfoService",
+	'vehicleDoorInfo': "http://gmapi.azurewebsites.net/getSecurityStatusService",
+	'vehicleFuelOrBatterInfo': "http://gmapi.azurewebsites.net/getEnergyService",
+	'vehicleEngineAction': "http://gmapi.azurewebsites.net/actionEngineService"
+};
 
 /**********************************************************************************************************************************/
 
@@ -17,29 +20,41 @@ var httpRoute = {
 		var pathListLength = pathList.length;
 
 		if(!isNaN(pathList[pathListLength - 1])) {
-			getVehicleInfo(pathList[pathListLength - 1], response);
+
+			var requestFields = {
+				"id": pathList[pathListLength - 1],
+				"responseType": "JSON"
+			}
+
+			sendTheRequest(urlDict['vehicleInfo'], requestFields, 'vehicleInfo', response);
+
 		}
 		else if(!isNaN(pathList[pathListLength - 2])) {
 			var actionType 	= pathList[pathListLength - 1];
 			var vehicleId 	= pathList[pathListLength - 2];
 
+			var requestFields = {
+				"id": vehicleId,
+				"responseType": "JSON"
+			}
+
 			switch(actionType) {
 
 				/* Get Vehicle doors information */
 				case 'doors': {
-					getVehicleDoorInfo(vehicleId, response);
+					sendTheRequest(urlDict['vehicleDoorInfo'], requestFields, 'vehicleDoorInfo', response);
 					break;	
 				}
 					
 				/* Get Vehicle Fuel Information */
 				case 'fuel': {
-					getVehicleFuelInfo(vehicleId, response);
+					sendTheRequest(urlDict['vehicleFuelOrBatterInfo'], requestFields, 'vehicleFuelInfo', response);
 					break;
 				}
 				 		
 				/* Get Vehicle Battery Information */
 				case 'battery': {
-					getVehicleBatteryInfo(vehicleId, response);
+					sendTheRequest(urlDict['vehicleFuelOrBatterInfo'], requestFields, 'vehicleBatteryInfo', response);
 					break;
 				}	
 
@@ -78,12 +93,31 @@ var httpRoute = {
 
 					data = JSON.parse(data);
 
-					if(data['action'] != 'START' && data['action'] != 'STOP') {
+					action = data['action']
+
+					if(action != 'START' && action != 'STOP') {
 						/* Wrong action specified */
 						httpRoute['NA']['wrongParameters'](request, response);
 					}
 					else {
-						startOrStopVehicle(vehicleId, data['action'], response);
+
+						if(action == 'START') {
+							actionString = 'START_VEHICLE';
+						}
+						else if(action == 'STOP') {
+							actionString = 'STOP_VEHICLE';
+						}
+						else {
+							/* We should not be hitting this else statement */
+						}
+
+						var requestFields = {
+							"id": vehicleId,
+							"command": actionString,
+							"responseType": "JSON"
+						}
+
+						sendTheRequest(vehicleEngineAction, requestFields, 'vehicleStartOrStopInfo', response);
 					}
 				});
 			}
@@ -112,7 +146,7 @@ var httpRoute = {
 			response.end('<h1> Wrong parameters passed </h1>');
 		},
 
-		'wrongResponse': function() {
+		'wrongResponse': function(originalResponse) {
 			originalResponse.writeHead(500);
 			originalResponse.end('<h1> Wrong JSON returned by Server </h1>');
 		}
@@ -124,7 +158,7 @@ var httpRoute = {
 /* Response Generators */
 var routes = {
 	/* Vehicle Information Response  */
-	'vehicleInfo': function(receivedResponseBody) {
+	'vehicleInfo': function(receivedResponseBody, originalResponse) {
 		try {
 			var responseFields = {
 				'vin': receivedResponseBody['data']['vin']['value'],
@@ -142,12 +176,12 @@ var routes = {
 			originalResponse.end(JSON.stringify(responseFields));
 		}
 		catch(err) {
-			httpRoute['NA']['wrongResponse']();
+			httpRoute['NA']['wrongResponse'](originalResponse);
 		}
 	},
 
 	/* Vehicle Door Response */
-	'vehicleDoorInfo': function(receivedResponseBody) {
+	'vehicleDoorInfo': function(receivedResponseBody, originalResponse) {
 		try {
 			var responseFields 	= [];
 			var doorCount	   	= receivedResponseBody['data']['doors']['values'].length;
@@ -171,12 +205,12 @@ var routes = {
 			originalResponse.end(JSON.stringify(responseFields));
 		}
 		catch(err) {
-			httpRoute['NA']['wrongResponse']();
+			httpRoute['NA']['wrongResponse'](originalResponse);
 		}
 	},
 
 	/* Vehicle Fuel Information Response */
-	'vehicleFuelInfo': function(receivedResponseBody) {
+	'vehicleFuelInfo': function(receivedResponseBody, originalResponse) {
 		try {
 			var responseFields = {
 				'percent': parseFloat(receivedResponseBody['data']['tankLevel']['value'], 10)
@@ -186,12 +220,12 @@ var routes = {
 			originalResponse.end(JSON.stringify(responseFields));
 		}
 		catch(err) {
-			httpRoute['NA']['wrongResponse']();
+			httpRoute['NA']['wrongResponse'](originalResponse);
 		}
 	},
 
 	/* Vehicle Battery Information Response */
-	'vehicleBatteryInfo': function(receivedResponseBody) {
+	'vehicleBatteryInfo': function(receivedResponseBody, originalResponse) {
 		try {
 			var responseFields = {
 				'percent': parseFloat(receivedResponseBody['data']['batteryLevel']['value'], 10)
@@ -201,12 +235,12 @@ var routes = {
 			originalResponse.end(JSON.stringify(responseFields));
 		}
 		catch(err) {
-			httpRoute['NA']['wrongResponse']();
+			httpRoute['NA']['wrongResponse'](originalResponse);
 		}
 	},
 
 	/* Vehicle Start or Stop Response */
-	'vehicleStartOrStopInfo': function(receivedResponseBody) {
+	'vehicleStartOrStopInfo': function(receivedResponseBody, originalResponse) {
 		try {
 			var responseFields = {};
 
@@ -225,12 +259,12 @@ var routes = {
 			originalResponse.end(JSON.stringify(responseFields));
 		}
 		catch(err) {
-			httpRoute['NA']['wrongResponse']();
+			httpRoute['NA']['wrongResponse'](originalResponse);
 		}
 	},
 
 	/* Error Response Handler */
-	'errorResponse': function(receivedResponseBody) {
+	'errorResponse': function(receivedResponseBody, originalResponse) {
 		try {
 			var responseFields = {
 				'status': 404,
@@ -241,7 +275,7 @@ var routes = {
 			originalResponse.end(JSON.stringify(responseFields));
 		}
 		catch(err) {
-			httpRoute['NA']['wrongResponse']();
+			httpRoute['NA']['wrongResponse'](originalResponse);
 		}
 	}
 };
@@ -249,7 +283,7 @@ var routes = {
 /**********************************************************************************************************************************/
 
 /* Function to call the appropriate response generator */
-var storeParseReturntheResponse = function(body, actionType){
+var storeParseReturntheResponse = function(body, actionType, origResponse){
 
 	console.log(body);
 
@@ -257,14 +291,14 @@ var storeParseReturntheResponse = function(body, actionType){
 		routes['errorResponse'](body);
 	}
 	else {
-		routes[actionType](body);
+		routes[actionType](body, origResponse);
 	}
 }
 
 /**********************************************************************************************************************************/
 
 /* Function to send the request to the Server */
-var sendTheRequest = function(urlString, requestFields, actionType){
+var sendTheRequest = function(urlString, requestFields, actionType, origResponse){
 
 	request({
 		uri: urlString,
@@ -279,88 +313,10 @@ var sendTheRequest = function(urlString, requestFields, actionType){
 		body: requestFields
 	}, function(error, response, body) {
 		if (!error && response.statusCode === 200) {
-			storeParseReturntheResponse(body, actionType);
+			storeParseReturntheResponse(body, actionType, origResponse);
 		}
 	});
 
-}
-
-/**********************************************************************************************************************************/
-
-/* Starting functions to send the requests */
-
-var getVehicleInfo = function(vehicleId, response) {
-
-	originalResponse = response;
-
-	var urlString = "http://gmapi.azurewebsites.net/getVehicleInfoService";
-	var requestFields = {
-		"id": vehicleId,
-		"responseType": "JSON"
-	}
-	sendTheRequest(urlString, requestFields, 'vehicleInfo');
-}
-
-var getVehicleDoorInfo = function(vehicleId, response) {
-
-	originalResponse = response;
-
-	var urlString = "http://gmapi.azurewebsites.net/getSecurityStatusService";
-	var requestFields = {
-		"id": vehicleId,
-		"responseType": "JSON"
-	}
-	sendTheRequest(urlString, requestFields, 'vehicleDoorInfo');
-}
-
-var getVehicleFuelInfo = function(vehicleId, response) {
-
-	originalResponse = response;
-
-	var urlString = "http://gmapi.azurewebsites.net/getEnergyService";
-	var requestFields = {
-		"id": vehicleId,
-		"responseType": "JSON"
-	}
-	sendTheRequest(urlString, requestFields, 'vehicleFuelInfo');
-}
-
-var getVehicleBatteryInfo = function(vehicleId, response) {
-
-	originalResponse = response;
-
-	var urlString = "http://gmapi.azurewebsites.net/getEnergyService";
-	var requestFields = {
-		"id": vehicleId,
-		"responseType": "JSON"
-	}
-	sendTheRequest(urlString, requestFields, 'vehicleBatteryInfo');
-}
-
-var startOrStopVehicle = function(vehicleId, actionRequested, response) {
-
-	originalResponse = response;
-
-	var urlString = "http://gmapi.azurewebsites.net/actionEngineService";
-
-	var actionString = '';
-
-	if(actionRequested == 'START') {
-		actionString = 'START_VEHICLE';
-	}
-	else if(actionRequested == 'STOP') {
-		actionString = 'STOP_VEHICLE';
-	}
-	else {
-		/* We should not be hitting this else statement */
-	}
-
-	var requestFields = {
-		"id": vehicleId,
-		"command": actionString,
-		"responseType": "JSON"
-	}
-	sendTheRequest(urlString, requestFields, 'vehicleStartOrStopInfo');
 }
 
 /**********************************************************************************************************************************/
